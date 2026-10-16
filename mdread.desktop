@@ -3,10 +3,14 @@ Type=Application
 Name=mdread
 GenericName=Markdown Viewer
 Comment=Fast GPU-rendered Markdown viewer
-Exec=mdread %f
+# install.sh fills in the absolute path of the installed binary below.
+# GNOME launches apps with a PATH that does not include ~/.local/bin, and
+# GLib refuses to load a desktop entry whose Exec binary it cannot find.
+TryExec=@BIN@
+Exec=@BIN@ %f
 Icon=text-markdown
 Terminal=false
-Categories=Office;Viewer;Utility;
+Categories=Office;Viewer;
 MimeType=text/markdown;text/x-markdown;
 Keywords=markdown;md;viewer;
 StartupWMClass=mdread

@@ -25,11 +25,17 @@ pulldown-cmark, highlights code with syntect.
 
 ```bash
 cargo build --release          # binary at target/release/mdread
-./install.sh                   # copies it to ~/.local/bin and installs a desktop entry
+./install.sh                   # installs to ~/.local/bin, adds a desktop entry,
+                               # and makes mdread the default for Markdown files
 ```
 
 Requires rustc 1.92+ (Ubuntu 26.04 ships 1.93 and cargo via `apt install cargo`).
 No system GUI libraries are needed beyond Mesa/Wayland/X11 runtime libraries.
+No packaging (.deb) is needed: a per-user desktop entry is enough for GNOME,
+Nautilus and `xdg-open`. The installer writes the binary's absolute path into
+the entry because GNOME launches apps with a `PATH` that does not include
+`~/.local/bin`, and GLib silently drops entries whose `Exec` it cannot resolve.
+To undo the default: `xdg-mime default org.gnome.TextEditor.desktop text/markdown`.
 
 ## Usage
 
