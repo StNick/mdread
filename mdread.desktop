@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=mdread
+GenericName=Markdown Viewer
+Comment=Fast GPU-rendered Markdown viewer
+Exec=mdread %f
+Icon=text-markdown
+Terminal=false
+Categories=Office;Viewer;Utility;
+MimeType=text/markdown;text/x-markdown;
+Keywords=markdown;md;viewer;
+StartupWMClass=mdread

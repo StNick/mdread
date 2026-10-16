@@ -1,0 +1,35 @@
+[package]
+name = "mdread"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+description = "A very fast GPU-rendered Markdown viewer for large, high-DPI screens"
+license = "MIT"
+
+[dependencies]
+eframe = { version = "0.35", default-features = false, features = ["glow", "wayland", "x11", "persistence", "default_fonts"] }
+egui = { version = "0.35", features = ["serde"] }
+egui_extras = { version = "0.35", default-features = false, features = ["all_loaders", "svg_text"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp", "ico"] }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["simd"] }
+syntect = { version = "5", default-features = false, features = ["parsing", "dump-load", "regex-fancy", "default-themes"] }
+two-face = { version = "0.5", default-features = false, features = ["syntect-fancy"] }
+notify = "8"
+open = "5"
+serde = { version = "1", features = ["derive"] }
+env_logger = { version = "0.11", default-features = false }
+log = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

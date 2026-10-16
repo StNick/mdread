@@ -1,0 +1,80 @@
+# mdread
+
+A very fast, GPU-rendered Markdown viewer for Linux, built for large high-DPI
+screens. Rust + [egui](https://github.com/emilk/egui) (OpenGL), parses with
+pulldown-cmark, highlights code with syntect.
+
+- Cold start to first frame in about 100 ms; an 800 KB / 1100-block document
+  parses in ~4 ms and renders in under 2 ms per frame (only visible blocks are
+  laid out).
+- Crisp text at any scale, including fractional Wayland scaling, using the
+  system's Ubuntu Sans (variable weight) and JetBrains Mono.
+- Widescreen layout: outline sidebar that tracks the section you are reading,
+  files sidebar for the rest of the folder, and a reading column capped at a
+  comfortable measure (adjustable, or full width).
+- Live reload when the file changes on disk.
+- Dark and light themes, following the system by default.
+- GFM: tables, task lists, strikethrough, footnotes, alerts (`> [!NOTE]`),
+  definition lists, front matter, math (shown as monospace), local and remote
+  images (PNG, JPEG, GIF, WebP, SVG), inline badges, HTML `<img>`.
+- Links: web links open in the browser, relative `.md` links open in the
+  viewer (with back/forward), `#anchors` jump within the document.
+- Search with highlighted matches, copy button on code blocks, text selection.
+
+## Build
+
+```bash
+cargo build --release          # binary at target/release/mdread
+./install.sh                   # copies it to ~/.local/bin and installs a desktop entry
+```
+
+Requires rustc 1.92+ (Ubuntu 26.04 ships 1.93 and cargo via `apt install cargo`).
+No system GUI libraries are needed beyond Mesa/Wayland/X11 runtime libraries.
+
+## Usage
+
+```bash
+mdread README.md
+mdread docs/guide.md#installation     # open at a heading
+mdread notes.md --find TODO           # open with the search box filled in
+cat file.md | mdread -                # from stdin
+mdread --light file.md                # force a theme for this session
+```
+
+Open the file dialog with `Ctrl+O` (uses zenity) or drop a file onto the window.
+
+## Keys
+
+| Keys | Action |
+|---|---|
+| `j` `k` `↓` `↑` | scroll by line |
+| `Space` `PgDn` / `Shift+Space` `PgUp` | scroll by page |
+| `d` `u` | half page |
+| `g` `G` `Home` `End` | top / bottom |
+| `/` `Ctrl+F` | find; `Enter` `n` `N` next / previous |
+| `o` | outline sidebar |
+| `f` | files sidebar |
+| `t` | dark / light |
+| `w` | full-width column; `[` `]` narrower / wider |
+| `Ctrl +` `Ctrl -` `Ctrl 0`, `Ctrl`+scroll | zoom |
+| `Alt+←` `Backspace` / `Alt+→` | back / forward |
+| `r` `F5` | reload |
+| `?` `F1` | help |
+| `q` `Ctrl+Q` | quit |
+
+Settings (zoom, column width, sidebars, theme, window size) persist between runs.
+
+## Fonts
+
+Body text uses the first of: Ubuntu Sans (variable), Ubuntu, Noto Sans,
+DejaVu Sans. Code uses the first of: JetBrains Mono, Ubuntu Sans Mono,
+Ubuntu Mono, Fira Code, DejaVu Sans Mono. Override with
+`MDREAD_FONT=/path/to/font.ttf` and `MDREAD_MONO_FONT=...`.
+
+## Debugging
+
+```bash
+RUST_LOG=mdread=debug mdread file.md            # parse timing, image errors
+RUST_LOG=mdread=trace mdread file.md            # per-frame timing
+mdread --screenshot out.png --screenshot-delay 1500 file.md   # headless-ish capture
+```
