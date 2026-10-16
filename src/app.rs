@@ -133,6 +133,39 @@ pub struct App {
     screenshot_requested: bool,
 }
 
+/// Label for the primary shortcut modifier: egui's `Modifiers::COMMAND` is Cmd on macOS
+/// and Ctrl everywhere else.
+const CMD: &str = if cfg!(target_os = "macos") { "⌘" } else { "Ctrl" };
+
+/// Shell command that prints the chosen file path on stdout, or nothing if cancelled.
+/// macOS uses the native panel through `osascript`; elsewhere `zenity` (GTK).
+fn file_dialog_command(start_dir: Option<&Path>) -> std::process::Command {
+    if cfg!(target_os = "macos") {
+        let mut script = String::from(
+            "POSIX path of (choose file with prompt \"Open Markdown file\" of type {\"md\", \"markdown\", \"mdown\", \"mkd\", \"mdx\", \"txt\", \"public.plain-text\"}",
+        );
+        if let Some(d) = start_dir {
+            // AppleScript string literals: escape backslashes and double quotes.
+            let d = d.display().to_string().replace('\\', "\\\\").replace('"', "\\\"");
+            script.push_str(&format!(" default location POSIX file \"{d}\""));
+        }
+        script.push(')');
+        let mut cmd = std::process::Command::new("osascript");
+        cmd.arg("-e").arg(script);
+        cmd
+    } else {
+        let mut cmd = std::process::Command::new("zenity");
+        cmd.arg("--file-selection")
+            .arg("--title=Open Markdown file")
+            .arg("--file-filter=Markdown | *.md *.markdown *.mdown *.mkd *.mdx *.txt")
+            .arg("--file-filter=All files | *");
+        if let Some(d) = start_dir {
+            cmd.arg(format!("--filename={}/", d.display()));
+        }
+        cmd
+    }
+}
+
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Self {
         let ctx = &cc.egui_ctx;
@@ -347,15 +380,7 @@ impl App {
         std::thread::Builder::new()
             .name("file-dialog".into())
             .spawn(move || {
-                let mut cmd = std::process::Command::new("zenity");
-                cmd.arg("--file-selection")
-                    .arg("--title=Open Markdown file")
-                    .arg("--file-filter=Markdown | *.md *.markdown *.mdown *.mkd *.mdx *.txt")
-                    .arg("--file-filter=All files | *");
-                if let Some(d) = start_dir {
-                    cmd.arg(format!("--filename={}/", d.display()));
-                }
-                let out = cmd.output().ok();
+                let out = file_dialog_command(start_dir.as_deref()).output().ok();
                 let path = out
                     .filter(|o| o.status.success())
                     .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
@@ -1007,7 +1032,7 @@ impl App {
                         } else {
                             100
                         };
-                        ui.label(RichText::new(format!("{zoom}%")).size(small).color(pal.text_dim)).on_hover_text("Zoom (Ctrl +/−/0, Ctrl+scroll)");
+                        ui.label(RichText::new(format!("{zoom}%")).size(small).color(pal.text_dim)).on_hover_text(format!("Zoom ({CMD} +/−/0, {CMD}+scroll)"));
                         ui.separator();
                         ui.label(RichText::new(format!("{pct}%")).size(small).color(pal.text_dim)).on_hover_text("Scroll position");
                         if let Some(doc) = &self.doc {
@@ -1040,9 +1065,13 @@ impl App {
             .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
             .frame(Frame::window(&ctx.global_style()).fill(pal.panel_bg).inner_margin(Margin::same(18)))
             .show(ctx, |ui| {
+                let open_key = format!("{CMD}+O");
+                let find_key = format!("{CMD}+F  /");
+                let zoom_key = format!("{CMD} + −  0   {CMD}+scroll");
+                let quit_key = format!("q  {CMD}+Q");
                 let rows: &[(&str, &str)] = &[
-                    ("Ctrl+O", "Open file"),
-                    ("Ctrl+F  /", "Find in document"),
+                    (&open_key, "Open file"),
+                    (&find_key, "Find in document"),
                     ("Enter  n  N", "Next / previous match"),
                     ("j k  ↓ ↑", "Scroll by line"),
                     ("Space  PgDn / Shift+Space  PgUp", "Scroll by page"),
@@ -1052,12 +1081,12 @@ impl App {
                     ("f", "Toggle files sidebar"),
                     ("t", "Toggle dark / light theme"),
                     ("w   [  ]", "Full-width column / narrower / wider"),
-                    ("Ctrl + −  0   Ctrl+scroll", "Zoom"),
+                    (&zoom_key, "Zoom"),
                     ("Alt+←  Backspace  /  Alt+→", "Back / forward"),
                     ("r  F5", "Reload (files also reload automatically)"),
                     ("Click link", "Open in browser, or follow to another .md"),
                     ("Hover code block", "Copy button"),
-                    ("q  Ctrl+Q", "Quit"),
+                    (&quit_key, "Quit"),
                 ];
                 egui::Grid::new("help-grid").num_columns(2).spacing([24.0, 6.0]).show(ui, |ui| {
                     for (k, v) in rows {
@@ -1268,7 +1297,7 @@ impl App {
                 ui.label(RichText::new(err).color(pal.caution).size(base));
                 ui.add_space(base);
             }
-            ui.label(RichText::new("Drop a Markdown file here, or press Ctrl+O to open one.").color(pal.text_dim).size(base * 1.05));
+            ui.label(RichText::new(format!("Drop a Markdown file here, or press {CMD}+O to open one.")).color(pal.text_dim).size(base * 1.05));
             ui.add_space(base * 0.3);
             ui.label(RichText::new("mdread README.md    ·    cat notes.md | mdread -").monospace().color(pal.text_dim).size(base * 0.9));
             ui.add_space(base * 1.5);

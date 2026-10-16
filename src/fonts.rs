@@ -1,8 +1,12 @@
 //! Locate good system fonts and register them with egui.
 //!
 //! Preference order (body): Ubuntu Sans (variable, so bold is a real weight axis),
-//! Ubuntu static, Noto Sans, DejaVu Sans, then egui's bundled fonts.
-//! Preference order (code): JetBrains Mono, Ubuntu Sans Mono, DejaVu Sans Mono, egui's Hack.
+//! Ubuntu static, Noto Sans, DejaVu Sans, SF Pro (macOS, variable), Arial, then egui's
+//! bundled fonts.
+//! Preference order (code): JetBrains Mono, any installed Nerd Font, Ubuntu Sans Mono,
+//! Ubuntu Mono, Fira Code, DejaVu Sans Mono, SF Mono / Menlo-era Monaco (macOS), egui's Hack.
+//! Files are looked up by bare name in `FONT_DIRS`, so a user-installed copy in
+//! `~/.local/share/fonts` or `~/Library/Fonts` wins over a distro one.
 //! Override with MDREAD_FONT / MDREAD_MONO_FONT (paths to .ttf/.otf files).
 
 use std::path::{Path, PathBuf};
@@ -36,50 +40,98 @@ struct Candidate {
     variable: bool,
 }
 
+/// Directories searched, in order, for the bare file names in `SANS` and `MONO`.
+/// User font directories come first so a locally installed font beats the system copy.
+#[cfg(target_os = "macos")]
+const FONT_DIRS: &[&str] = &[
+    "~/Library/Fonts",
+    "/Library/Fonts",
+    "/System/Library/Fonts",
+    "/System/Library/Fonts/Supplemental",
+];
+#[cfg(not(target_os = "macos"))]
+const FONT_DIRS: &[&str] = &[
+    "~/.local/share/fonts",
+    "~/.local/share/fonts/ttf",
+    "~/.fonts",
+    "/usr/share/fonts/truetype/ubuntu",
+    "/usr/share/fonts/truetype/noto",
+    "/usr/share/fonts/truetype/dejavu",
+    "/usr/share/fonts/truetype/jetbrains-mono",
+    "/usr/share/fonts/truetype/firacode",
+    "/usr/share/fonts/truetype",
+    "/usr/share/fonts",
+];
+
 const SANS: &[Candidate] = &[
     Candidate {
         name: "Ubuntu Sans",
-        regular: "/usr/share/fonts/truetype/ubuntu/UbuntuSans[wdth,wght].ttf",
-        italic: Some("/usr/share/fonts/truetype/ubuntu/UbuntuSans-Italic[wdth,wght].ttf"),
+        regular: "UbuntuSans[wdth,wght].ttf",
+        italic: Some("UbuntuSans-Italic[wdth,wght].ttf"),
         bold: None,
         bold_italic: None,
         variable: true,
     },
     Candidate {
         name: "Ubuntu",
-        regular: "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-        italic: Some("/usr/share/fonts/truetype/ubuntu/Ubuntu-RI.ttf"),
-        bold: Some("/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"),
-        bold_italic: Some("/usr/share/fonts/truetype/ubuntu/Ubuntu-BI.ttf"),
+        regular: "Ubuntu-R.ttf",
+        italic: Some("Ubuntu-RI.ttf"),
+        bold: Some("Ubuntu-B.ttf"),
+        bold_italic: Some("Ubuntu-BI.ttf"),
         variable: false,
     },
     Candidate {
         name: "Noto Sans",
-        regular: "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        italic: Some("/usr/share/fonts/truetype/noto/NotoSans-Italic.ttf"),
-        bold: Some("/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"),
-        bold_italic: Some("/usr/share/fonts/truetype/noto/NotoSans-BoldItalic.ttf"),
+        regular: "NotoSans-Regular.ttf",
+        italic: Some("NotoSans-Italic.ttf"),
+        bold: Some("NotoSans-Bold.ttf"),
+        bold_italic: Some("NotoSans-BoldItalic.ttf"),
         variable: false,
     },
     Candidate {
         name: "DejaVu Sans",
-        regular: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        italic: Some("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"),
-        bold: Some("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-        bold_italic: Some("/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"),
+        regular: "DejaVuSans.ttf",
+        italic: Some("DejaVuSans-Oblique.ttf"),
+        bold: Some("DejaVuSans-Bold.ttf"),
+        bold_italic: Some("DejaVuSans-BoldOblique.ttf"),
+        variable: false,
+    },
+    // macOS system UI font: a variable TrueType with a `wght` axis, like Ubuntu Sans.
+    Candidate {
+        name: "SF Pro",
+        regular: "SFNS.ttf",
+        italic: Some("SFNSItalic.ttf"),
+        bold: None,
+        bold_italic: None,
+        variable: true,
+    },
+    // Ships with macOS in /System/Library/Fonts/Supplemental.
+    Candidate {
+        name: "Arial",
+        regular: "Arial.ttf",
+        italic: Some("Arial Italic.ttf"),
+        bold: Some("Arial Bold.ttf"),
+        bold_italic: Some("Arial Bold Italic.ttf"),
         variable: false,
     },
 ];
 
-const MONO: &[(&str, &str)] = &[
-    ("JetBrains Mono", "~/.local/share/fonts/ttf/JetBrainsMono-Regular.ttf"),
-    ("JetBrains Mono", "~/.local/share/fonts/JetBrainsMono-Regular.ttf"),
-    ("JetBrains Mono", "/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf"),
-    ("JetBrains Mono", "/usr/share/fonts/truetype/JetBrainsMono-Regular.ttf"),
-    ("Ubuntu Sans Mono", "/usr/share/fonts/truetype/ubuntu/UbuntuSansMono[wght].ttf"),
-    ("Ubuntu Mono", "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf"),
-    ("Fira Code", "/usr/share/fonts/truetype/firacode/FiraCode-Regular.ttf"),
-    ("DejaVu Sans Mono", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"),
+const MONO: &[(&str, &str)] = &[("JetBrains Mono", "JetBrainsMono-Regular.ttf")];
+
+/// Any Nerd Font patched monospace face found in `FONT_DIRS`, tried after `MONO` and
+/// before the distro fallbacks in `MONO_FALLBACK`. Nerd Fonts v3 names files
+/// `<Family>NerdFontMono-Regular.ttf` (icons fitted to one cell) and
+/// `<Family>NerdFont-Regular.ttf`; the Mono variant is preferred since it never
+/// disturbs code alignment.
+const NERD_FONT_SUFFIXES: &[&str] = &["NerdFontMono-Regular.ttf", "NerdFont-Regular.ttf"];
+
+const MONO_FALLBACK: &[(&str, &str)] = &[
+    ("Ubuntu Sans Mono", "UbuntuSansMono[wght].ttf"),
+    ("Ubuntu Mono", "UbuntuMono-R.ttf"),
+    ("Fira Code", "FiraCode-Regular.ttf"),
+    ("DejaVu Sans Mono", "DejaVuSansMono.ttf"),
+    ("SF Mono", "SFNSMono.ttf"),
+    ("Monaco", "Monaco.ttf"),
 ];
 
 fn expand(p: &str) -> PathBuf {
@@ -91,8 +143,38 @@ fn expand(p: &str) -> PathBuf {
     PathBuf::from(p)
 }
 
+/// Read a font file. Absolute (or `~/`) paths are read as given; a bare file name is
+/// looked up in each of `FONT_DIRS` in turn.
 fn read(p: &str) -> Option<Vec<u8>> {
-    std::fs::read(expand(p)).ok()
+    if p.starts_with('/') || p.starts_with("~/") {
+        return std::fs::read(expand(p)).ok();
+    }
+    FONT_DIRS.iter().find_map(|d| std::fs::read(expand(d).join(p)).ok())
+}
+
+/// First Nerd Font monospace face found, as (display name, bytes). Only the top level of
+/// each font directory is listed (a handful of entries), so this costs well under a
+/// millisecond and never walks the whole of /usr/share/fonts.
+fn find_nerd_font() -> Option<(String, Vec<u8>)> {
+    for suffix in NERD_FONT_SUFFIXES {
+        for dir in FONT_DIRS {
+            let Ok(entries) = std::fs::read_dir(expand(dir)) else { continue };
+            let mut names: Vec<String> = entries
+                .filter_map(|e| e.ok())
+                .filter_map(|e| e.file_name().into_string().ok())
+                .filter(|n| n.ends_with(suffix))
+                .collect();
+            names.sort();
+            for file in names {
+                if let Ok(bytes) = std::fs::read(expand(dir).join(&file)) {
+                    let family = file.trim_end_matches(suffix);
+                    let kind = if suffix.starts_with("NerdFontMono") { "Nerd Font Mono" } else { "Nerd Font" };
+                    return Some((format!("{family} {kind}"), bytes));
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Emoji / symbol fallbacks that ship inside egui and should end every family list.
@@ -222,6 +304,21 @@ pub fn install(ctx: &Context) -> FontSet {
             }
         }
     }
+    if mono_bytes.is_none() {
+        if let Some((name, bytes)) = find_nerd_font() {
+            mono_name = name;
+            mono_bytes = Some(bytes);
+        }
+    }
+    if mono_bytes.is_none() {
+        for (name, path) in MONO_FALLBACK {
+            if let Some(bytes) = read(path) {
+                mono_name = (*name).to_owned();
+                mono_bytes = Some(bytes);
+                break;
+            }
+        }
+    }
     if let Some(bytes) = mono_bytes {
         defs.font_data
             .insert("mdread-mono".to_owned(), Arc::new(FontData::from_owned(bytes)));
@@ -229,6 +326,7 @@ pub fn install(ctx: &Context) -> FontSet {
         mono.insert(0, "mdread-mono".to_owned());
     }
 
+    log::debug!("fonts: body {sans_name} (variable weight: {variable}), code {mono_name}");
     ctx.set_fonts(defs);
 
     FontSet {
