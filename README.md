@@ -101,3 +101,7 @@ RUST_LOG=mdread=debug mdread file.md            # parse timing, image errors
 RUST_LOG=mdread=trace mdread file.md            # per-frame timing
 mdread --screenshot out.png --screenshot-delay 1500 file.md   # headless-ish capture
 ```
+
+## License
+
+[MIT](LICENSE).
