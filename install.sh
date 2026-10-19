@@ -3,9 +3,9 @@
 # and register it as the default application for Markdown files.
 set -euo pipefail
 cd "$(dirname "$0")"
-if [ ! -x target/release/mdread ]; then
-  cargo build --release
-fi
+# Always build: cargo skips the work when nothing changed, and guarding on the
+# binary's existence would install a stale build after source edits.
+cargo build --release
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
 BIN="$BIN_DIR/mdread"
@@ -24,7 +24,18 @@ mkdir -p "$APP_DIR"
 sed "s|@BIN@|$BIN|g" mdread.desktop > "$APP_DIR/mdread.desktop"
 chmod 644 "$APP_DIR/mdread.desktop"
 update-desktop-database "$APP_DIR" 2>/dev/null || true
-echo "Installed $BIN and $APP_DIR/mdread.desktop."
+# Icons: the desktop entry names "mdread", which GNOME looks up in the hicolor
+# theme (the fallback every icon theme inherits). Without these it shows a
+# placeholder in the dock, window switcher and app grid. Wayland compositors
+# take the icon from the desktop entry matched by app id, not from the window.
+ICON_DIR="$HOME/.local/share/icons/hicolor"
+for png in assets/icons/hicolor/*/apps/mdread.png; do
+  size=$(basename "$(dirname "$(dirname "$png")")")
+  install -D -m 644 "$png" "$ICON_DIR/$size/apps/mdread.png"
+done
+install -D -m 644 assets/icons/mdread.svg "$ICON_DIR/scalable/apps/mdread.svg"
+gtk-update-icon-cache -q -t -f "$ICON_DIR" 2>/dev/null || true
+echo "Installed $BIN, $APP_DIR/mdread.desktop and icons under $ICON_DIR."
 if command -v xdg-mime >/dev/null 2>&1; then
   xdg-mime default mdread.desktop text/markdown text/x-markdown
   echo "Registered mdread as the default application for Markdown files."

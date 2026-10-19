@@ -78,6 +78,14 @@ fn parse_args() -> Args {
     args
 }
 
+/// Window icon, used for `_NET_WM_ICON` on X11, the Dock on macOS and the task bar on
+/// Windows. Wayland compositors ignore it and take the icon from the desktop entry that
+/// matches the app id instead, which `install.sh` installs together with the icon files.
+fn app_icon() -> egui::IconData {
+    eframe::icon_data::from_png_bytes(include_bytes!("../assets/icons/hicolor/256x256/apps/mdread.png"))
+        .expect("embedded icon PNG is valid")
+}
+
 fn main() -> eframe::Result {
     let launched = std::time::Instant::now();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
@@ -88,6 +96,7 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("mdread")
             .with_app_id("mdread")
+            .with_icon(app_icon())
             .with_inner_size([1500.0, 1250.0])
             .with_min_inner_size([420.0, 300.0]),
         persist_window: true,

@@ -26,8 +26,8 @@ pulldown-cmark, highlights code with syntect.
 
 ```bash
 cargo build --release          # binary at target/release/mdread
-./install.sh                   # installs to ~/.local/bin, adds a desktop entry,
-                               # and makes mdread the default for Markdown files
+./install.sh                   # installs to ~/.local/bin, adds a desktop entry and
+                               # icons, and makes mdread the default for Markdown files
 ```
 
 Requires rustc 1.92+ (Ubuntu 26.04 ships 1.93 and cargo via `apt install cargo`).
@@ -37,6 +37,11 @@ Nautilus and `xdg-open`. The installer writes the binary's absolute path into
 the entry because GNOME launches apps with a `PATH` that does not include
 `~/.local/bin`, and GLib silently drops entries whose `Exec` it cannot resolve.
 To undo the default: `xdg-mime default org.gnome.TextEditor.desktop text/markdown`.
+The installer also puts the app icon into `~/.local/share/icons/hicolor`, which
+every icon theme falls back to, so the dock, window switcher and app grid show
+mdread's own icon rather than a placeholder (icon sources and a render script
+are in `assets/icons`). The icon is embedded in the binary too, which covers the
+X11 window icon and the macOS Dock while mdread is running.
 
 On macOS, `cargo build --release` works unchanged (install the toolchain with
 `brew install rustup && rustup default stable`; the build needs Xcode Command

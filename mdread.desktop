@@ -8,7 +8,7 @@ Comment=Fast GPU-rendered Markdown viewer
 # GLib refuses to load a desktop entry whose Exec binary it cannot find.
 TryExec=@BIN@
 Exec=@BIN@ %f
-Icon=text-markdown
+Icon=mdread
 Terminal=false
 Categories=Office;Viewer;
 MimeType=text/markdown;text/x-markdown;
