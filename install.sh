@@ -9,8 +9,16 @@ fi
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
 BIN="$BIN_DIR/mdread"
-mkdir -p "$BIN_DIR" "$APP_DIR"
+mkdir -p "$BIN_DIR"
 install -m 755 target/release/mdread "$BIN"
+if [ "$(uname -s)" = "Darwin" ]; then
+  # No desktop entry or MIME registration on macOS: mdread is run from a shell
+  # (`mdread file.md`), via Cmd+O, or by dropping a file onto the window.
+  echo "Installed $BIN."
+  case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "Note: add $BIN_DIR to your PATH to run 'mdread' from a shell." ;; esac
+  exit 0
+fi
+mkdir -p "$APP_DIR"
 # The desktop entry must carry an absolute Exec path: GNOME's session PATH
 # does not include ~/.local/bin, and GLib ignores entries it cannot resolve.
 sed "s|@BIN@|$BIN|g" mdread.desktop > "$APP_DIR/mdread.desktop"

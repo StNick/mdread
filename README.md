@@ -1,14 +1,15 @@
 # mdread
 
-A very fast, GPU-rendered Markdown viewer for Linux, built for large high-DPI
-screens. Rust + [egui](https://github.com/emilk/egui) (OpenGL), parses with
+A very fast, GPU-rendered Markdown viewer for Linux and macOS, built for large
+high-DPI screens. Rust + [egui](https://github.com/emilk/egui) (OpenGL), parses with
 pulldown-cmark, highlights code with syntect.
 
 - Cold start to first frame in about 100 ms; an 800 KB / 1100-block document
   parses in ~4 ms and renders in under 2 ms per frame (only visible blocks are
   laid out).
-- Crisp text at any scale, including fractional Wayland scaling, using the
-  system's Ubuntu Sans (variable weight) and JetBrains Mono.
+- Crisp text at any scale, including fractional Wayland scaling and Retina,
+  using the system's Ubuntu Sans or SF Pro (variable weight) and JetBrains Mono
+  or any installed Nerd Font.
 - Widescreen layout: outline sidebar that tracks the section you are reading,
   files sidebar for the rest of the folder, and a reading column capped at a
   comfortable measure (adjustable, or full width).
@@ -37,6 +38,12 @@ the entry because GNOME launches apps with a `PATH` that does not include
 `~/.local/bin`, and GLib silently drops entries whose `Exec` it cannot resolve.
 To undo the default: `xdg-mime default org.gnome.TextEditor.desktop text/markdown`.
 
+On macOS, `cargo build --release` works unchanged (install the toolchain with
+`brew install rustup && rustup default stable`; the build needs Xcode Command
+Line Tools and nothing else). `./install.sh` copies the binary to `~/.local/bin`
+and skips the desktop entry. Shortcuts use `⌘` where the table below says `Ctrl`,
+and the file dialog is the native panel instead of zenity.
+
 ## Usage
 
 ```bash
@@ -47,7 +54,8 @@ cat file.md | mdread -                # from stdin
 mdread --light file.md                # force a theme for this session
 ```
 
-Open the file dialog with `Ctrl+O` (uses zenity) or drop a file onto the window.
+Open the file dialog with `Ctrl+O` (`⌘O` on macOS; uses zenity on Linux) or drop
+a file onto the window.
 
 ## Keys
 
@@ -73,8 +81,12 @@ Settings (zoom, column width, sidebars, theme, window size) persist between runs
 ## Fonts
 
 Body text uses the first of: Ubuntu Sans (variable), Ubuntu, Noto Sans,
-DejaVu Sans. Code uses the first of: JetBrains Mono, Ubuntu Sans Mono,
-Ubuntu Mono, Fira Code, DejaVu Sans Mono. Override with
+DejaVu Sans, SF Pro (macOS, variable), Arial. Code uses the first of: JetBrains
+Mono, any installed [Nerd Font](https://www.nerdfonts.com/) (`*NerdFontMono-Regular.ttf`,
+then `*NerdFont-Regular.ttf`), Ubuntu Sans Mono, Ubuntu Mono, Fira Code, DejaVu
+Sans Mono, SF Mono, Monaco. Fonts are found by file name in the user font
+directories (`~/.local/share/fonts`, `~/.fonts`, `~/Library/Fonts`) before the
+system ones, so installing a preferred font per user is enough. Override with
 `MDREAD_FONT=/path/to/font.ttf` and `MDREAD_MONO_FONT=...`.
 
 ## Debugging
